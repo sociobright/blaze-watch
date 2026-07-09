@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blaze Watch — catch the Blaze Star when it erupts</title>
+  <meta name="description" content="A live, interactive sky map and eruption alarm for T Coronae Borealis — the recurrent nova about to become a naked-eye 'new star' for the first time since 1946. Free and open source.">
+  <!-- Social sharing. TODO: add docs/preview.png so the og:image preview resolves. -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Blaze Watch — catch the Blaze Star when it erupts">
+  <meta property="og:description" content="Live sky map + eruption alarm for T Coronae Borealis. Be ready for the naked-eye nova.">
+  <meta property="og:url" content="https://sociobright.github.io/blaze-watch/">
+  <meta property="og:image" content="https://sociobright.github.io/blaze-watch/docs/preview.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Blaze Watch — catch the Blaze Star when it erupts">
+  <meta name="twitter:description" content="Live sky map + eruption alarm for T Coronae Borealis. Be ready for the naked-eye nova.">
+  <meta name="twitter:image" content="https://sociobright.github.io/blaze-watch/docs/preview.png">
+<style>
+  :root{
+    --sky:#070b1e; --ink:#d3dcf6; --muted:#8a95c2;
+    --gold:#ffd36a; --blaze:#ff6a4d; --blue:#bcd2ff;
+    --card:rgba(255,255,255,.035); --line:rgba(150,168,228,.16);
+    --disp:Georgia,"Times New Roman",serif;
+    --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--body); color:var(--ink); line-height:1.6;
+    background:#000;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:760px;margin:0 auto;padding:30px 18px 60px}
+  .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--gold);margin:0 0 10px}
+  h1{font-family:var(--disp);font-weight:600;font-size:clamp(38px,9vw,60px);
+    line-height:1.02;margin:0 0 14px;letter-spacing:-.01em}
+  h2{font-family:var(--disp);font-weight:600;font-size:clamp(22px,5vw,29px);margin:0 0 6px}
+  .lede{font-size:clamp(15.5px,2.4vw,18px);color:#c3ccef;max-width:54ch;margin:0 0 20px}
+  a{color:var(--gold)}
+  .btn{display:inline-block;font-family:var(--mono);font-size:13px;color:#0a0f24;
+    background:var(--gold);text-decoration:none;font-weight:600;padding:11px 16px;border-radius:10px}
+  .btn:hover{filter:brightness(1.08)}
+
+  header{position:relative;overflow:hidden}
+  .twinkle{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;
+    opacity:.5;animation:tw 3.6s ease-in-out infinite}
+  @keyframes tw{0%,100%{opacity:.15}50%{opacity:.85}}
+
+  section{margin-top:44px}
+  .card{border:1px solid var(--line);background:var(--card);border-radius:18px;padding:14px;margin-top:16px}
+  .card svg{display:block;width:100%;height:auto;border-radius:10px}
+  .cap{color:var(--muted);font-size:14px;margin:12px 4px 2px}
+  .cap b{color:#cfd8f7;font-weight:600}
+  .gold{color:var(--gold);font-weight:600}.blaze{color:var(--blaze);font-weight:600}
+
+  /* controls */
+  .controls{display:flex;flex-direction:column;gap:14px}
+  .ctl-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .timelabel{font-family:var(--disp);font-size:clamp(26px,7vw,38px);color:#fff;min-width:150px}
+  .datewrap{display:flex;gap:8px;align-items:center}
+  input[type=date]{font-family:var(--mono);font-size:14px;color:var(--ink);
+    background:rgba(10,16,36,.6);border:1px solid var(--line);border-radius:9px;padding:8px 10px;color-scheme:dark}
+  .nowbtn{font-family:var(--mono);font-size:12.5px;color:#0a0f24;background:var(--blue);
+    border:0;border-radius:9px;padding:9px 13px;font-weight:600;cursor:pointer}
+  .nowbtn:hover{filter:brightness(1.06)}
+  input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:6px;
+    background:#243056;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;
+    background:var(--gold);border:3px solid #0a0f24;cursor:pointer;box-shadow:0 0 10px rgba(255,211,106,.5)}
+  input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:var(--gold);
+    border:3px solid #0a0f24;cursor:pointer}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .qbtn{font-family:var(--mono);font-size:12px;color:#cfd8f7;background:rgba(255,255,255,.04);
+    border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer}
+  .qbtn:hover{border-color:var(--gold);color:#fff}
+  .qbtn.active{border-color:var(--gold);color:var(--gold)}
+  .vbtn{font-family:var(--mono);font-size:12.5px;color:#cfd8f7;background:rgba(255,255,255,.04);
+    border:1px solid var(--line);border-radius:10px;padding:9px 14px;cursor:pointer}
+  .vbtn.active{color:#0a0f24;background:var(--gold);border-color:var(--gold);font-weight:700}
+  .vbtn:not(.active):hover{border-color:var(--gold);color:#fff}
+  .loc-row{align-items:center}
+  .geo{background:var(--blue)}
+  .loc-row label{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px}
+  .loc-row input[type=number]{width:74px;font-family:var(--mono);font-size:13px;color:var(--ink);
+    background:rgba(10,16,36,.6);border:1px solid var(--line);border-radius:8px;padding:6px 8px;color-scheme:dark}
+  #locMsg{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+  #placeName{font-family:var(--mono);font-size:12px;color:#c7d2f5}
+  #placeName:empty{display:none}
+  #shareMsg{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+  .share{margin-left:auto}
+
+  .readout{margin-top:14px;border-top:1px solid var(--line);padding-top:14px;
+    display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+  @media(max-width:520px){.readout{grid-template-columns:1fr}}
+  .ro{font-size:14px}
+  .ro .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);display:block;margin-bottom:2px}
+  .ro .v{color:#dbe3fb}
+  .ro.big .v{font-size:15.5px}
+  #coronaState{font-weight:600}
+  .pick{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:10px;min-height:1.2em}
+  .pick b{color:var(--gold)}
+
+  ol.hop{list-style:none;counter-reset:s;padding:0;margin:18px 0 0}
+  ol.hop li{counter-increment:s;position:relative;padding:0 0 14px 46px;color:#c8d1f2}
+  ol.hop li::before{content:counter(s);position:absolute;left:0;top:-2px;width:30px;height:30px;
+    border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:13px;
+    color:var(--gold);border:1px solid var(--line);background:rgba(255,211,106,.06)}
+  ol.hop li:last-child{padding-bottom:0}
+  .aside{color:var(--muted);font-size:14px;margin-top:6px;padding-left:46px}
+  ul.todo{list-style:none;padding:0;margin:18px 0 0}
+  ul.todo li{position:relative;padding:0 0 12px 30px;color:#c8d1f2}
+  ul.todo li::before{content:"\2726";position:absolute;left:0;top:0;color:var(--gold)}
+  ul.todo li:last-child{padding-bottom:0}
+  footer{margin-top:50px;padding-top:22px;border-top:1px solid var(--line);color:var(--muted);font-size:13.5px}
+  footer .sig{font-family:var(--mono);font-size:11.5px;letter-spacing:.04em;margin-top:12px;color:#6f7aa8}
+
+  .tcrb-pulse{transform-box:fill-box;transform-origin:center;animation:tcrbPulse 2.6s ease-out infinite}
+  @keyframes tcrbPulse{0%{opacity:.85;transform:scale(.55)}70%{opacity:0;transform:scale(2.4)}100%{opacity:0;transform:scale(2.4)}}
+  @media (prefers-reduced-motion: reduce){.tcrb-pulse{animation:none;opacity:0}.twinkle{animation:none;opacity:.5}}
+  .starlabel{font-family:var(--body);fill:#c7d2f5;font-size:12px}
+  .starlabel.dim{fill:#8b97c8;font-size:11px}
+  #sky text,#sky .stardot{pointer-events:none}
+  .starhit{fill:rgba(0,0,0,0);pointer-events:all;cursor:pointer}
+  .selring{fill:none;stroke:var(--gold);stroke-width:1.6;pointer-events:none}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <span class="twinkle" style="left:8%;top:18px"></span>
+    <span class="twinkle" style="left:24%;top:58px;animation-delay:.8s"></span>
+    <span class="twinkle" style="left:44%;top:12px;animation-delay:1.6s"></span>
+    <span class="twinkle" style="left:66%;top:50px;animation-delay:.4s"></span>
+    <span class="twinkle" style="left:82%;top:22px;animation-delay:2.1s"></span>
+    <p class="eyebrow">Northern Crown · your sky</p>
+    <h1>The Blaze&nbsp;Star</h1>
+    <p class="lede">A star that isn't there tonight is about to switch on. Set the date and time you'll
+      be outside and the sky below rotates to match — so you can see exactly where the Crown is and
+      where the new star will appear. Right now it's invisible (~mag 10); when it blazes it jumps to
+      about mag 2, as bright as the North Star, for only a few nights.</p>
+    <a class="btn" href="https://apps.aavso.org/webobs/results/?star=T+CrB" target="_blank" rel="noopener">Check if it's live now →</a>
+  </header>
+
+  <section>
+    <p class="eyebrow">Live sky · drag the time</p>
+    <h2>Where to look, right now</h2>
+    <div class="card">
+      <div class="controls">
+        <div class="ctl-row">
+          <div class="timelabel" id="timeLabel">10:00 PM</div>
+          <div class="datewrap">
+            <input type="date" id="dateInput" aria-label="Date">
+            <button class="nowbtn" id="nowBtn">Use now</button>
+          </div>
+        </div>
+        <input type="range" id="timeSlider" min="0" max="1439" step="10" value="1320" aria-label="Time of day">
+        <div class="chips">
+          <button class="qbtn" data-min="1260">9 PM</button>
+          <button class="qbtn" data-min="1320">10 PM</button>
+          <button class="qbtn" data-min="1380">11 PM</button>
+          <button class="qbtn" data-min="60">1 AM</button>
+          <button class="qbtn" data-min="240">4 AM</button>
+        </div>
+        <div class="ctl-row loc-row">
+          <button class="nowbtn geo" id="geoBtn">📍 Use my location</button>
+          <label>Lat <input type="number" id="latIn" step="0.1" min="-90" max="90"></label>
+          <label>Lon <input type="number" id="lonIn" step="0.1" min="-180" max="180"></label>
+          <span id="placeName"></span>
+          <span id="locMsg"></span>
+        </div>
+        <div class="ctl-row viewrow" role="group" aria-label="Map view">
+          <button class="vbtn active" id="viewSky" aria-pressed="true">🌐 Whole sky</button>
+          <button class="vbtn" id="viewZoom" aria-pressed="false">🔍 Close-up: the Crown</button>
+          <button class="vbtn share" id="shareBtn" title="Copy a link that reproduces this exact view">🔗 Share this sky</button>
+          <span id="shareMsg"></span>
+        </div>
+      </div>
+
+      <svg id="sky" viewBox="0 0 680 700" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Interactive sky map"></svg>
+
+      <div class="readout">
+        <div class="ro big"><span class="k">Corona Borealis</span>
+          <span class="v"><span id="coronaState"></span> <span id="coronaDir"></span></span></div>
+        <div class="ro"><span class="k">T CrB (the target)</span><span class="v" id="tcrbState"></span></div>
+        <div class="ro"><span class="k">Highest this date</span><span class="v" id="bestTime"></span></div>
+        <div class="ro"><span class="k">Moonlight</span><span class="v" id="moonState"></span></div>
+      </div>
+      <div class="pick" id="pick">Tip: tap any star to identify it.</div>
+    </div>
+    <p class="cap" id="capSky">The disc is the whole sky; centre is straight up, edge is the horizon. East and West
+      read reversed vs a ground map because you're looking <b>up</b>. Computed for <span id="locCap">your location</span>.</p>
+    <p class="cap" id="capZoom" hidden><span class="blaze">T&nbsp;CrB</span> sits just off the Crown's arc — about a finger-width from
+      the faint star <b>ε</b>, roughly 5° from <b>Alphecca</b>. Same orientation as the whole-sky view, computed live for your
+      time and place. When it blazes it will roughly match Alphecca — a <b>second bright jewel</b> in the Crown.</p>
+
+    <ol class="hop">
+      <li>Find the <b>Big Dipper</b> and follow its handle's curve — <span class="gold">"arc to Arcturus,"</span> the bright orange star.</li>
+      <li>Carry on from Arcturus through faint <b>Izar</b> to <span class="gold">Alphecca</span>, the bright star in the little backward-C. That C is the Crown.</li>
+      <li>The <span class="blaze">pulsing gold ring</span> marks the exact spot the new star appears — beside the Crown, next to Alphecca. Tap <b>🔍 Close-up</b> above the map to zoom right in.</li>
+    </ol>
+    <p class="aside">From the other side, brilliant blue-white <b>Vega</b> points back to the same place.</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">When it happens</p>
+    <h2>Four things to do</h2>
+    <ul class="todo">
+      <li>Set the time above to when you're out, face the compass point it names, look nearly straight up.</li>
+      <li>Find the Crown's backward-C and its bright star <span class="gold">Alphecca</span>.</li>
+      <li>Look for a <span class="blaze">new star of about the same brightness</span> right beside it — that's the one.</li>
+      <li>Photograph it — and a "before" shot of the empty Crown makes a great comparison.</li>
+    </ul>
+  </section>
+
+  <footer>
+    Positions computed live for <span id="locFoot">your location</span> and your chosen date/time; approximate, for naked-eye
+    finding. Not sure if it's blazing yet? The AAVSO database sees it first —
+    <a href="https://apps.aavso.org/webobs/results/?star=T+CrB" target="_blank" rel="noopener">check the live magnitude</a>.
+    Data: the <a href="https://www.aavso.org" target="_blank" rel="noopener">AAVSO</a> International Database, contributed by observers worldwide. Open source on <a href="https://github.com/sociobright/blaze-watch" target="_blank" rel="noopener">GitHub</a>.<div class="sig">Blaze Watch · T Coronae Borealis · quiescent ≈ mag 10 · eruption ≈ mag 2 · MIT licensed</div>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var LAT=34.9, LON=33.0, phi=LAT*Math.PI/180;
+  var cx=340, cy=350, R=292;
+  var MODE='sky';   // 'sky' = whole-sky disc · 'zoom' = live close-up of the Crown
+
+  // [RA hours, Dec deg, mag, colorKey, label]
+  var S={
+    arcturus:[14.2610,19.182,-0.05,'o','Arcturus'], vega:[18.6156,38.784,0.03,'b','Vega'],
+    deneb:[20.6905,45.280,1.25,'w','Deneb'], altair:[19.8464,8.868,0.76,'w','Altair'],
+    antares:[16.4901,-26.432,1.06,'r','Antares'], polaris:[2.5303,89.264,1.98,'w','Polaris'],
+    izar:[14.7498,27.074,2.35,'w','Izar'], alphecca:[15.5781,26.715,2.22,'w','Alphecca'],
+    dubhe:[11.0621,61.751,1.79,'w','Dubhe'], merak:[11.0307,56.383,2.37,'w',''],
+    phecda:[11.8972,53.695,2.44,'w',''], megrez:[12.2571,57.033,3.31,'w',''],
+    alioth:[12.9005,55.960,1.77,'w',''], mizar:[13.3987,54.925,2.04,'w',''],
+    alkaid:[13.7923,49.313,1.86,'w','Alkaid'],
+    thecrb:[15.5578,31.359,4.14,'w',''], betacrb:[15.4636,29.106,3.68,'w',''],
+    gammacrb:[15.7127,26.296,3.84,'w',''], deltacrb:[15.8261,26.068,4.63,'w',''],
+    epscrb:[15.9578,26.878,4.15,'w','ε'], iotacrb:[16.0378,29.851,4.98,'w',''],
+    zetaher:[16.6882,31.603,2.81,'w',''], etaher:[16.7146,38.922,3.48,'w',''],
+    piher:[17.2506,36.809,3.16,'w',''], epsher:[17.0057,30.926,3.92,'w',''],
+    rasalhague:[17.1725,12.560,2.08,'w','Rasalhague'], kornephoros:[16.5036,21.490,2.77,'w','']
+  };
+  var TCRB=[15.9668,25.920];
+  var COL={w:'#e6ecff',b:'#bcd2ff',o:'#ffb27a',r:'#ff8f6b'};
+  // friendly names for tap-to-identify (stars whose map label is hidden or abbreviated)
+  var NAME={merak:'Merak',phecda:'Phecda',megrez:'Megrez',alioth:'Alioth',mizar:'Mizar',
+    thecrb:'θ CrB',betacrb:'β CrB (Nusakan)',gammacrb:'γ CrB',deltacrb:'δ CrB',
+    epscrb:'ε CrB',iotacrb:'ι CrB',zetaher:'ζ Herculis',etaher:'η Herculis',
+    piher:'π Herculis',epsher:'ε Herculis',kornephoros:'Kornephoros'};
+  function starName(k){return S[k][4]||NAME[k]||k;}
+  // labels used only in the zoomed close-up
+  var ZLBL={thecrb:'θ',betacrb:'β · Nusakan',alphecca:'Alphecca (α)',gammacrb:'γ',
+    deltacrb:'δ',epscrb:'ε',iotacrb:'ι'};
+
+  var LINES=[
+    {pts:['dubhe','merak','phecda','megrez','dubhe'],stroke:'#5a6aa0',w:1.5},
+    {pts:['megrez','alioth','mizar','alkaid'],stroke:'#5a6aa0',w:1.5},
+    {pts:['vega','deneb','altair','vega'],stroke:'#3f4d85',w:1.1,dash:'2 4'},
+    {pts:['thecrb','betacrb','alphecca','gammacrb','deltacrb','epscrb','iotacrb'],stroke:'#9fb2ff',w:1.8},
+    {pts:['zetaher','etaher','piher','epsher','zetaher'],stroke:'#374169',w:1,dash:'2 4'}
+  ];
+  var HOP=[['alkaid','arcturus'],['arcturus','izar','alphecca'],['vega','alphecca']];
+
+  var DIRS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  function compass(az){return DIRS[Math.round(az/22.5)%16];}
+
+  function jdFromMillis(ms){return ms/86400000+2440587.5;}
+  function gmst(jd){var d=jd-2451545.0,T=d/36525.0;
+    var g=280.46061837+360.98564736629*d+0.000387933*T*T-(T*T*T)/38710000.0;
+    return ((g%360)+360)%360;}
+  function lstDeg(jd){return ((gmst(jd)+LON)%360+360)%360;}
+
+  function altaz(raH,decD,lst){
+    var H=((lst-raH*15)%360+360)%360*Math.PI/180;
+    var dec=decD*Math.PI/180;
+    var alt=Math.asin(Math.sin(phi)*Math.sin(dec)+Math.cos(phi)*Math.cos(dec)*Math.cos(H));
+    var sA=-Math.cos(dec)*Math.sin(H)/Math.cos(alt);
+    var cA=(Math.sin(dec)-Math.sin(phi)*Math.sin(alt))/(Math.cos(phi)*Math.cos(alt));
+    var A=(Math.atan2(sA,cA)*180/Math.PI+360)%360;
+    return {alt:alt*180/Math.PI,az:A};
+  }
+  function project(alt,az){
+    if(alt<-0.5) return null;
+    var r=R*(90-alt)/90, a=az*Math.PI/180;
+    return {x:cx-r*Math.sin(a), y:cy-r*Math.cos(a)};
+  }
+
+  // --- Moon: truncated Meeus series (~0.3° — plenty for naked-eye glare advice) ---
+  function moonAt(jd){
+    var T=(jd-2451545.0)/36525, r=Math.PI/180;
+    function n(x){return ((x%360)+360)%360;}
+    var Lp=n(218.3164477+481267.88123421*T);   // mean longitude
+    var D =n(297.8501921+445267.1114034*T);    // mean elongation
+    var M =n(357.5291092+35999.0502909*T);     // sun mean anomaly
+    var Mp=n(134.9633964+477198.8675055*T);    // moon mean anomaly
+    var F =n(93.2720950+483202.0175233*T);     // argument of latitude
+    var lon=Lp
+      +6.289*Math.sin(Mp*r)
+      +1.274*Math.sin((2*D-Mp)*r)
+      +0.658*Math.sin(2*D*r)
+      +0.214*Math.sin(2*Mp*r)
+      -0.186*Math.sin(M*r)
+      -0.114*Math.sin(2*F*r);
+    var lat=5.128*Math.sin(F*r)
+      +0.281*Math.sin((Mp+F)*r)
+      +0.277*Math.sin((Mp-F)*r)
+      +0.173*Math.sin((2*D-F)*r);
+    var eps=23.4393*r, lo=lon*r, la=lat*r;
+    var ra=Math.atan2(Math.sin(lo)*Math.cos(eps)-Math.tan(la)*Math.sin(eps),Math.cos(lo));
+    var dec=Math.asin(Math.sin(la)*Math.cos(eps)+Math.cos(la)*Math.sin(eps)*Math.sin(lo));
+    // phase from elongation vs the sun's mean-corrected longitude
+    var sunLon=n(280.460+36000.771*T+1.915*Math.sin(M*r)+0.020*Math.sin(2*M*r));
+    var elong=n(lon-sunLon);
+    var frac=(1-Math.cos(elong*r))/2;          // illuminated fraction
+    var names=['New Moon','Waxing crescent','First quarter','Waxing gibbous','Full Moon','Waning gibbous','Last quarter','Waning crescent'];
+    var emo  =['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'];
+    var idx=Math.round(elong/45)%8;
+    return {raH:n(ra/r)/15, dec:dec/r, frac:frac, name:names[idx], emoji:emo[idx], elong:elong};
+  }
+
+  // Interpret the chosen clock time in the OBSERVER'S OWN timezone (the device's tz),
+  // so "10 PM" means 10 PM where the user is, wherever that is on Earth.
+  function localToJD(y,mo,da,hh,mm){
+    return jdFromMillis(new Date(y,mo,da,hh,mm,0).getTime());
+  }
+  function fmtLatLon(lat,lon){
+    return Math.abs(lat).toFixed(1)+'°'+(lat>=0?'N':'S')+', '
+         + Math.abs(lon).toFixed(1)+'°'+(lon>=0?'E':'W');
+  }
+
+  var svg=document.getElementById('sky');
+  var dateInput=document.getElementById('dateInput');
+  var slider=document.getElementById('timeSlider');
+  var timeLabel=document.getElementById('timeLabel');
+
+  function fmtTime(min){var h=Math.floor(min/60),m=min%60;var ap=h<12?'AM':'PM';
+    var hh=h%12; if(hh===0)hh=12; return hh+':'+(m<10?'0':'')+m+' '+ap;}
+
+  function positionsFor(jd){
+    var lst=lstDeg(jd), pos={};
+    for(var k in S){var aa=altaz(S[k][0],S[k][1],lst); pos[k]={aa:aa,p:project(aa.alt,aa.az)};}
+    var t=altaz(TCRB[0],TCRB[1],lst); pos.__tcrb={aa:t,p:project(t.alt,t.az)};
+    var mn=moonAt(jd), maa=altaz(mn.raH,mn.dec,lst);
+    pos.__moon={aa:maa,p:project(maa.alt,maa.az),info:mn};
+    return pos;
+  }
+
+  // like project(), but keeps below-horizon points (used by the close-up view)
+  function projectRaw(aa){
+    var r=R*(90-aa.alt)/90, a=aa.az*Math.PI/180;
+    return {x:cx-r*Math.sin(a), y:cy-r*Math.cos(a)};
+  }
+
+  function buildSky(pos){
+    var out=[], hits=[];
+    // defs + sky disc + rings
+    out.push('<defs><radialGradient id="sk" cx="50%" cy="50%" r="50%">'+
+      '<stop offset="0%" stop-color="#0d1330"/><stop offset="72%" stop-color="#080c22"/>'+
+      '<stop offset="100%" stop-color="#04050f"/></radialGradient>'+
+      '<filter id="gl" x="-140%" y="-140%" width="380%" height="380%">'+
+      '<feGaussianBlur stdDeviation="3.4"/></filter></defs>');
+    out.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+R+'" fill="url(#sk)" stroke="#5566a0" stroke-width="1.6"/>');
+    out.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+(R*2/3).toFixed(1)+'" fill="none" stroke="#28325a" stroke-dasharray="3 5"/>');
+    out.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+(R/3).toFixed(1)+'" fill="none" stroke="#28325a" stroke-dasharray="3 5"/>');
+    // altitude-ring + horizon labels (explain the dashed circles)
+    out.push('<text x="'+cx+'" y="'+Math.round(cy-R*2/3-6)+'" text-anchor="middle" fill="#3e4a7d" font-size="10">30° up</text>');
+    out.push('<text x="'+cx+'" y="'+Math.round(cy-R/3-6)+'" text-anchor="middle" fill="#3e4a7d" font-size="10">60° up</text>');
+    out.push('<text x="'+cx+'" y="'+Math.round(cy+R-10)+'" text-anchor="middle" fill="#3e4a7d" font-size="10">horizon</text>');
+    // cardinal labels (E left, W right — looking up)
+    out.push('<text x="'+cx+'" y="'+(cy-R-12)+'" text-anchor="middle" fill="#ffd24a" font-size="17" font-weight="bold">N</text>');
+    out.push('<text x="'+cx+'" y="'+(cy+R+24)+'" text-anchor="middle" fill="#ffd24a" font-size="17" font-weight="bold">S</text>');
+    out.push('<text x="'+(cx-R-14)+'" y="'+(cy+6)+'" text-anchor="middle" fill="#ffd24a" font-size="17" font-weight="bold">E</text>');
+    out.push('<text x="'+(cx+R+14)+'" y="'+(cy+6)+'" text-anchor="middle" fill="#ffd24a" font-size="17" font-weight="bold">W</text>');
+
+    function seg(a,b,stroke,w,dash){
+      if(!a||!b)return'';
+      return '<line x1="'+a.x.toFixed(1)+'" y1="'+a.y.toFixed(1)+'" x2="'+b.x.toFixed(1)+'" y2="'+b.y.toFixed(1)+
+        '" stroke="'+stroke+'" stroke-width="'+w+'"'+(dash?' stroke-dasharray="'+dash+'"':'')+'/>';
+    }
+    // constellation lines
+    LINES.forEach(function(L){
+      for(var i=0;i<L.pts.length-1;i++){
+        out.push(seg(pos[L.pts[i]].p,pos[L.pts[i+1]].p,L.stroke,L.w,L.dash));
+      }
+    });
+    // star-hop (gold dashed)
+    HOP.forEach(function(seq){
+      for(var i=0;i<seq.length-1;i++){
+        var A=seq[i]==='__tcrb'?pos.__tcrb.p:pos[seq[i]].p;
+        var B=seq[i+1]==='__tcrb'?pos.__tcrb.p:pos[seq[i+1]].p;
+        out.push(seg(A,B,'#ffcf5c',1.8,'6 5'));
+      }
+    });
+    // zenith
+    out.push('<line x1="'+(cx-7)+'" y1="'+cy+'" x2="'+(cx+7)+'" y2="'+cy+'" stroke="#6b78ad"/>'+
+             '<line x1="'+cx+'" y1="'+(cy-7)+'" x2="'+cx+'" y2="'+(cy+7)+'" stroke="#6b78ad"/>');
+    out.push('<text x="'+cx+'" y="'+(cy-12)+'" text-anchor="middle" fill="#55608c" font-size="9.5">zenith</text>');
+
+    // stars (visible dots + large invisible tap targets)
+    for(var k in S){
+      var p=pos[k].p; if(!p) continue;
+      var mag=S[k][2], rad=Math.max(1.3,Math.min(5.2,3.6-0.42*mag));
+      var color=COL[S[k][3]]||COL.w;
+      var glow=mag<1.7?' filter="url(#gl)"':'';
+      out.push('<circle class="stardot" cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+rad.toFixed(1)+'" fill="'+color+'"'+glow+'/>');
+      if(S[k][4]){
+        var cls=mag<2.6?'starlabel':'starlabel dim';
+        out.push('<text class="'+cls+'" x="'+(p.x+7).toFixed(1)+'" y="'+(p.y+4).toFixed(1)+'">'+S[k][4]+'</text>');
+      }
+      hits.push('<circle class="starhit" data-name="'+starName(k)+'" data-alt="'+pos[k].aa.alt.toFixed(0)+
+        '" data-az="'+pos[k].aa.az.toFixed(0)+'" cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="12"/>');
+    }
+    // Moon (drawn when up — the main source of glare)
+    var mp=pos.__moon.p, mi=pos.__moon.info;
+    if(mp){
+      out.push('<circle cx="'+mp.x.toFixed(1)+'" cy="'+mp.y.toFixed(1)+'" r="8" fill="#ece7d8" opacity=".95" filter="url(#gl)"/>');
+      out.push('<text class="starlabel dim" x="'+(mp.x+12).toFixed(1)+'" y="'+(mp.y+4).toFixed(1)+'">'+mi.emoji+' Moon</text>');
+      hits.push('<circle class="starhit" data-name="Moon — '+mi.name+', '+Math.round(mi.frac*100)+'% lit" data-alt="'+pos.__moon.aa.alt.toFixed(0)+
+        '" data-az="'+pos.__moon.aa.az.toFixed(0)+'" cx="'+mp.x.toFixed(1)+'" cy="'+mp.y.toFixed(1)+'" r="14"/>');
+    }
+    // T CrB marker + pulse — ALWAYS on the map. Above the horizon it sits at its
+    // true position; below, a dimmed indicator pins to the horizon edge at its
+    // azimuth (the exact point of your horizon it is hiding under, and will rise from).
+    var tp=pos.__tcrb.p, baa=pos.__tcrb.aa;
+    if(tp){
+      out.push('<circle class="tcrb-pulse" cx="'+tp.x.toFixed(1)+'" cy="'+tp.y.toFixed(1)+'" r="6" fill="none" stroke="#ffd36a" stroke-width="1.6"/>');
+      out.push('<circle cx="'+tp.x.toFixed(1)+'" cy="'+tp.y.toFixed(1)+'" r="5.2" fill="#ffd24a" filter="url(#gl)"/>');
+      out.push('<circle cx="'+tp.x.toFixed(1)+'" cy="'+tp.y.toFixed(1)+'" r="2.4" fill="#ff5a4a"/>');
+      out.push('<text class="starlabel" x="'+(tp.x-7).toFixed(1)+'" y="'+(tp.y+18).toFixed(1)+'" text-anchor="end" fill="#ffe08a">T CrB</text>');
+      hits.push('<circle class="starhit" data-name="T CrB — the Blaze Star" data-alt="'+baa.alt.toFixed(0)+
+        '" data-az="'+baa.az.toFixed(0)+'" cx="'+tp.x.toFixed(1)+'" cy="'+tp.y.toFixed(1)+'" r="13"/>');
+    }else{
+      var ba=baa.az*Math.PI/180;
+      var ex=cx-R*Math.sin(ba), ey=cy-R*Math.cos(ba);
+      var ux=(ex-cx)/R, uy=(ey-cy)/R;                 // outward radial unit vector
+      out.push('<g opacity=".6">');
+      out.push('<circle class="tcrb-pulse" cx="'+ex.toFixed(1)+'" cy="'+ey.toFixed(1)+'" r="6" fill="none" stroke="#ffd36a" stroke-width="1.6"/>');
+      out.push('<circle cx="'+ex.toFixed(1)+'" cy="'+ey.toFixed(1)+'" r="5.2" fill="none" stroke="#ffd24a" stroke-width="1.8"/>');
+      // outward chevron: "it is below this point of your horizon"
+      var tx=ex+ux*13, ty=ey+uy*13, px=-uy, py=ux;
+      out.push('<polyline points="'+(tx-ux*5+px*5).toFixed(1)+','+(ty-uy*5+py*5).toFixed(1)+' '+
+        tx.toFixed(1)+','+ty.toFixed(1)+' '+(tx-ux*5-px*5).toFixed(1)+','+(ty-uy*5-py*5).toFixed(1)+
+        '" fill="none" stroke="#ffd24a" stroke-width="1.6"/>');
+      out.push('</g>');
+      var lx=cx+ux*(R-32), ly=cy+uy*(R-32);
+      out.push('<text class="starlabel" x="'+lx.toFixed(1)+'" y="'+(ly+4).toFixed(1)+'" text-anchor="middle" fill="#c9b063">T CrB — below horizon</text>');
+      hits.push('<circle class="starhit" data-name="T CrB — the Blaze Star" data-alt="'+baa.alt.toFixed(0)+
+        '" data-az="'+baa.az.toFixed(0)+'" cx="'+ex.toFixed(1)+'" cy="'+ey.toFixed(1)+'" r="14"/>');
+    }
+    if(baa.alt<0){
+      var msg;
+      if(pos.__rise) msg='T CrB is under your horizon — rises about '+fmtTime(pos.__rise.min)+' in the '+compass(pos.__rise.az);
+      else if(pos.__best<0) msg='T CrB never rises from this latitude';
+      else msg='T CrB is under your horizon right now';
+      out.push('<text x="'+cx+'" y="'+Math.round(cy-R+30)+'" text-anchor="middle" fill="#8a95c2" font-size="13">'+msg+'</text>');
+    }
+    out.push(hits.join(''));
+    return out.join('');
+  }
+
+  function buildZoom(pos){
+    var out=[], hits=[];
+    var aaA=pos.alphecca.aa, aaT=pos.__tcrb.aa;
+    out.push('<defs><radialGradient id="skz" cx="50%" cy="46%" r="62%">'+
+      '<stop offset="0%" stop-color="#0d1330"/><stop offset="100%" stop-color="#04050f"/></radialGradient>'+
+      '<filter id="glz" x="-140%" y="-140%" width="380%" height="380%">'+
+      '<feGaussianBlur stdDeviation="3.4"/></filter></defs>');
+    out.push('<rect x="1" y="1" width="678" height="698" rx="16" fill="url(#skz)" stroke="#5566a0" stroke-width="1.2"/>');
+    if(aaA.alt<-35){
+      out.push('<text x="340" y="330" text-anchor="middle" fill="#8a95c2" font-size="16">The Crown is far below the horizon at this time.</text>');
+      out.push('<text x="340" y="360" text-anchor="middle" fill="#6f7aa8" font-size="13">Set the time to “Highest this date” to preview the close-up.</text>');
+      return out.join('');
+    }
+    // Magnified crop of the SAME zenith projection — orientation always matches the whole-sky view.
+    var pA=projectRaw(aaA), pT=projectRaw(aaT);
+    var c0={x:(pA.x+pT.x)/2, y:(pA.y+pT.y)/2};
+    var Z=12, pxDeg=R/90*Z;                       // ~39 px per degree
+    function zp(aa){var p=projectRaw(aa); return {x:340+(p.x-c0.x)*Z, y:350+(p.y-c0.y)*Z};}
+    function inside(p,m){return p.x>-m&&p.x<680+m&&p.y>-m&&p.y<700+m;}
+
+    // Crown arc
+    var crown=['thecrb','betacrb','alphecca','gammacrb','deltacrb','epscrb','iotacrb'];
+    var pts=crown.map(function(k){var p=zp(pos[k].aa);return p.x.toFixed(1)+','+p.y.toFixed(1);});
+    out.push('<polyline points="'+pts.join(' ')+'" fill="none" stroke="#9fb2ff" stroke-width="2" opacity=".9"/>');
+
+    // Alphecca → T CrB distance cue
+    var zA=zp(aaA), zT=zp(aaT);
+    out.push('<line x1="'+zA.x.toFixed(1)+'" y1="'+zA.y.toFixed(1)+'" x2="'+zT.x.toFixed(1)+'" y2="'+zT.y.toFixed(1)+
+      '" stroke="#6f79a8" stroke-width="1" stroke-dasharray="3 6" opacity=".8"/>');
+    out.push('<text x="'+((zA.x+zT.x)/2+9).toFixed(1)+'" y="'+((zA.y+zT.y)/2-7).toFixed(1)+'" fill="#8a95c2" font-size="11">≈5.5°</text>');
+
+    // stars in the field (any catalog star that lands inside the frame)
+    for(var k in S){
+      var p=zp(pos[k].aa); if(!inside(p,10)) continue;
+      var mag=S[k][2], rad=Math.max(2.2,Math.min(6.5,7.0-1.0*mag));
+      var glow=mag<3?' filter="url(#glz)"':'';
+      out.push('<circle class="stardot" cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+rad.toFixed(1)+'" fill="'+(COL[S[k][3]]||COL.w)+'"'+glow+'/>');
+      var lbl=ZLBL[k];
+      if(lbl){
+        var big=(k==='alphecca');
+        out.push('<text class="starlabel'+(big?'':' dim')+'" x="'+(p.x+(big?12:9)).toFixed(1)+'" y="'+(p.y+4).toFixed(1)+'">'+lbl+'</text>');
+      }
+      hits.push('<circle class="starhit" data-name="'+starName(k)+'" data-alt="'+pos[k].aa.alt.toFixed(0)+
+        '" data-az="'+pos[k].aa.az.toFixed(0)+'" cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="16"/>');
+    }
+
+    // (No moon marker here: the moon never comes within ~50° of the Crown,
+    //  so it can never appear inside this close-up field.)
+
+    // T CrB marker
+    out.push('<circle class="tcrb-pulse" cx="'+zT.x.toFixed(1)+'" cy="'+zT.y.toFixed(1)+'" r="10" fill="none" stroke="#ffd36a" stroke-width="1.8"/>');
+    out.push('<circle cx="'+zT.x.toFixed(1)+'" cy="'+zT.y.toFixed(1)+'" r="7" fill="#ffd24a" filter="url(#glz)"/>');
+    out.push('<circle cx="'+zT.x.toFixed(1)+'" cy="'+zT.y.toFixed(1)+'" r="3" fill="#ff5a4a"/>');
+    out.push('<text x="'+(zT.x+16).toFixed(1)+'" y="'+(zT.y+5).toFixed(1)+'" fill="#ffe08a" font-size="14" font-weight="bold">T CrB</text>');
+    out.push('<text x="'+(zT.x+16).toFixed(1)+'" y="'+(zT.y+22).toFixed(1)+'" fill="#c9b063" font-size="11">the new star appears here</text>');
+    hits.push('<circle class="starhit" data-name="T CrB — the Blaze Star" data-alt="'+aaT.alt.toFixed(0)+
+      '" data-az="'+aaT.az.toFixed(0)+'" cx="'+zT.x.toFixed(1)+'" cy="'+zT.y.toFixed(1)+'" r="18"/>');
+
+    // live direction arrows to the two hop anchors
+    [['arcturus','to Arcturus'],['vega','to Vega']].forEach(function(g){
+      var pg=projectRaw(pos[g[0]].aa);
+      var dx=pg.x-c0.x, dy=pg.y-c0.y, L=Math.sqrt(dx*dx+dy*dy);
+      if(L<1e-6) return;
+      var ux=dx/L, uy=dy/L;
+      var tipx=340+ux*300, tipy=350+uy*300, hx=tipx-ux*10, hy=tipy-uy*10, px=-uy, py=ux;
+      out.push('<line x1="'+(340+ux*252).toFixed(1)+'" y1="'+(350+uy*252).toFixed(1)+'" x2="'+tipx.toFixed(1)+'" y2="'+tipy.toFixed(1)+'" stroke="#7d8ac0" stroke-width="1.6"/>');
+      out.push('<polygon points="'+tipx.toFixed(1)+','+tipy.toFixed(1)+' '+(hx+px*5).toFixed(1)+','+(hy+py*5).toFixed(1)+' '+(hx-px*5).toFixed(1)+','+(hy-py*5).toFixed(1)+'" fill="#7d8ac0"/>');
+      out.push('<text x="'+(340+ux*222).toFixed(1)+'" y="'+(350+uy*222+4).toFixed(1)+'" text-anchor="middle" fill="#9aa6d8" font-size="12">'+g[1]+'</text>');
+    });
+
+    // 5° scale bar
+    var sb=pxDeg*5;
+    out.push('<line x1="40" y1="666" x2="'+(40+sb).toFixed(1)+'" y2="666" stroke="#8593c8" stroke-width="1.4"/>');
+    out.push('<line x1="40" y1="660" x2="40" y2="672" stroke="#8593c8" stroke-width="1.4"/>');
+    out.push('<line x1="'+(40+sb).toFixed(1)+'" y1="660" x2="'+(40+sb).toFixed(1)+'" y2="672" stroke="#8593c8" stroke-width="1.4"/>');
+    out.push('<text x="'+(40+sb/2).toFixed(1)+'" y="652" text-anchor="middle" fill="#9aa6d8" font-size="11">5° ≈ 3 finger-widths at arm’s length</text>');
+
+    out.push('<text x="340" y="34" text-anchor="middle" fill="#cfd8f7" font-size="15" font-weight="bold">Close-up: the Northern Crown</text>');
+    if(aaA.alt<0) out.push('<text x="340" y="56" text-anchor="middle" fill="#8a95c2" font-size="12">below the horizon right now — pattern shown as it will appear when up</text>');
+    out.push(hits.join(''));
+    return out.join('');
+  }
+
+  function render(){
+    var parts=dateInput.value.split('-');
+    var y=+parts[0], mo=+parts[1]-1, da=+parts[2];
+    var min=+slider.value;
+    timeLabel.textContent=fmtTime(min);
+    var jd=localToJD(y,mo,da,Math.floor(min/60),min%60);
+    var pos=positionsFor(jd);
+
+    // daily scan (one pass): T CrB's transit time/altitude AND rise time for this date,
+    // so the map can say when/where it comes up whenever it's below the horizon
+    var best=-90,bt=0, rise=null, prevAlt=null;
+    for(var mm=0;mm<1440;mm+=8){
+      var j=localToJD(y,mo,da,Math.floor(mm/60),mm%60);
+      var aat=altaz(TCRB[0],TCRB[1],lstDeg(j));
+      if(aat.alt>best){best=aat.alt;bt=mm;}
+      if(prevAlt!==null && prevAlt<0 && aat.alt>=0 && rise===null) rise={min:mm,az:aat.az};
+      prevAlt=aat.alt;
+    }
+    pos.__rise=rise; pos.__best=best;
+
+    svg.innerHTML = (MODE==='zoom') ? buildZoom(pos) : buildSky(pos);
+
+    // highlight the quick-time chip that matches the slider
+    document.querySelectorAll('.qbtn').forEach(function(b){
+      b.classList.toggle('active', +b.getAttribute('data-min')===min);
+    });
+
+    // readout
+    var ca=pos.alphecca.aa, ta=pos.__tcrb.aa;
+    var cs=document.getElementById('coronaState'), cd=document.getElementById('coronaDir');
+    if(ca.alt<0){cs.textContent='Below the horizon now.'; cs.style.color='#8a95c2'; cd.textContent='';}
+    else{
+      var word=ca.alt>70?'Nearly overhead':(ca.alt>35?'High up':'Low, '+(pos.alphecca.aa.az<180?'rising':'setting'));
+      cs.textContent=word+' ('+ca.alt.toFixed(0)+'° up).'; cs.style.color='#fff';
+      cd.textContent='Face '+compass(ca.az)+'.';
+    }
+    document.getElementById('tcrbState').textContent =
+      ta.alt<0 ? 'Below horizon now' : ta.alt.toFixed(0)+'° up, toward '+compass(ta.az);
+
+    // moonlight advisory — the moon never comes within ~50° of the Crown, so the
+    // question is skyglow: it can wash out the FAINT crown stars (mag 4–5) used for
+    // orientation. An erupted T CrB (~mag 2) outshines even full-moon glow.
+    var mi=pos.__moon.info, maa=pos.__moon.aa;
+    var pct=Math.round(mi.frac*100);
+    var mtxt;
+    if(maa.alt<0)    mtxt='below the horizon — dark sky for the Crown ✓';
+    else if(pct<25)  mtxt='up, but a thin crescent ('+pct+'% lit) — little skyglow';
+    else if(pct<60)  mtxt='up, '+pct+'% lit — some skyglow; the Crown’s faintest stars may fade';
+    else             mtxt='up, '+pct+'% lit — washes out the faint Crown stars (Alphecca & an erupted T CrB stay easy)';
+    document.getElementById('moonState').textContent=mi.emoji+' '+mi.name+' — '+mtxt;
+
+    document.getElementById('bestTime').textContent =
+      best<0 ? 'Not visible this date' : 'Around '+fmtTime(bt)+' at '+best.toFixed(0)+'°';
+  }
+
+  // star tap identify — snaps to the NEAREST star within ~26 screen px, so it
+  // works with a fingertip on a phone; a gold ring marks the pick
+  svg.addEventListener('click',function(e){
+    var rect=svg.getBoundingClientRect();
+    if(!rect.width) return;
+    var scale=rect.width/680;
+    var vx=(e.clientX-rect.left)/scale, vy=(e.clientY-rect.top)/scale;
+    var bestEl=null, bestD=Infinity;
+    svg.querySelectorAll('.starhit').forEach(function(h){
+      var dx=+h.getAttribute('cx')-vx, dy=+h.getAttribute('cy')-vy;
+      var d=Math.sqrt(dx*dx+dy*dy);
+      if(d<bestD){bestD=d; bestEl=h;}
+    });
+    if(!bestEl || bestD>26/scale) return;
+    var old=svg.querySelector('.selring');
+    if(old&&old.parentNode) old.parentNode.removeChild(old);
+    var ring=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    ring.setAttribute('class','selring');
+    ring.setAttribute('cx',bestEl.getAttribute('cx'));
+    ring.setAttribute('cy',bestEl.getAttribute('cy'));
+    ring.setAttribute('r',String(+bestEl.getAttribute('r')-2));
+    svg.appendChild(ring);
+    var alt=+bestEl.getAttribute('data-alt'), az=+bestEl.getAttribute('data-az');
+    document.getElementById('pick').innerHTML='<b>'+bestEl.getAttribute('data-name')+'</b> — '+
+      (alt<0 ? 'below the horizon now'
+             : alt+'° up, azimuth '+az+'° ('+compass(az)+')');
+  });
+
+  // ---- location ----
+  var latIn=document.getElementById('latIn');
+  var lonIn=document.getElementById('lonIn');
+  var locMsg=document.getElementById('locMsg');
+  var placeEl=document.getElementById('placeName');
+  function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+
+  // ---- optional reverse-geocode (the ONLY runtime network call) ----
+  // Turns the coordinates into a place name via BigDataCloud's free, no-key,
+  // CORS-enabled client endpoint. Entirely optional: if it's blocked, offline,
+  // or slow, the finder still works — we just show the raw lat/lon.
+  var geoSeq=0, geoTimer=null;
+  // A few ISO "official" names come back verbose; map the common ones to short forms.
+  var CN={GB:'United Kingdom',US:'United States'};
+  function shortCountry(d){
+    var code=(d.countryCode||'').toUpperCase();
+    if(CN[code]) return CN[code];
+    var n=d.countryName||'';
+    if(n.indexOf(',')>-1) n=n.slice(0,n.indexOf(','));        // "Korea, Republic of" -> "Korea"
+    return n.replace(/\s*\([^)]*\)/g,'').trim();               // drop "(the)" and other parentheticals
+  }
+  function placeLabel(d){
+    if(!d||typeof d!=='object') return '';
+    var local=d.city||d.locality||d.principalSubdivision||'';
+    var country=shortCountry(d);
+    if(local&&country&&local!==country) return local+', '+country;
+    return local||country||'';
+  }
+  function reverseGeocode(lat,lon){
+    if(!placeEl||typeof fetch!=='function') return;
+    if(!isFinite(lat)||!isFinite(lon)){placeEl.textContent='';return;}
+    var seq=++geoSeq;
+    placeEl.textContent='locating place…';
+    var url='https://api.bigdatacloud.net/data/reverse-geocode-client?latitude='
+      +lat.toFixed(4)+'&longitude='+lon.toFixed(4)+'&localityLanguage=en';
+    fetch(url).then(function(r){return r.ok?r.json():null;}).then(function(d){
+      if(seq!==geoSeq) return;                 // a newer lookup superseded this one
+      var name=placeLabel(d);
+      placeEl.textContent=name?'📍 '+name:'';
+      if(name){
+        var ll=fmtLatLon(LAT,LON);
+        document.getElementById('locCap').textContent=name+' ('+ll+')';
+        document.getElementById('locFoot').textContent=name+' ('+ll+')';
+      }
+    }).catch(function(){ if(seq===geoSeq) placeEl.textContent=''; });
+  }
+  function scheduleGeocode(){
+    if(geoTimer) clearTimeout(geoTimer);
+    var la=LAT, lo=LON;
+    geoTimer=setTimeout(function(){reverseGeocode(la,lo);},400);
+  }
+
+  function setLocation(lat,lon,msg){
+    if(isFinite(lat)&&isFinite(lon)){
+      LAT=clamp(lat,-90,90); LON=clamp(lon,-180,180); phi=LAT*Math.PI/180;
+    }
+    latIn.value=LAT.toFixed(2); lonIn.value=LON.toFixed(2);
+    var ll=fmtLatLon(LAT,LON);
+    document.getElementById('locCap').textContent=ll;
+    document.getElementById('locFoot').textContent=ll;
+    locMsg.textContent=msg||'';
+    render();
+    scheduleGeocode();
+  }
+
+  // controls
+  slider.addEventListener('input',render);
+  dateInput.addEventListener('change',render);
+  document.querySelectorAll('.qbtn').forEach(function(b){
+    b.addEventListener('click',function(){slider.value=b.getAttribute('data-min');render();});
+  });
+  // whole-sky / close-up toggle
+  function setMode(m){
+    MODE=m;
+    var bs=document.getElementById('viewSky'), bz=document.getElementById('viewZoom');
+    bs.classList.toggle('active',m==='sky');  bs.setAttribute('aria-pressed',m==='sky');
+    bz.classList.toggle('active',m==='zoom'); bz.setAttribute('aria-pressed',m==='zoom');
+    document.getElementById('capSky').hidden=(m!=='sky');
+    document.getElementById('capZoom').hidden=(m!=='zoom');
+    render();
+  }
+  document.getElementById('viewSky').addEventListener('click',function(){setMode('sky');});
+  document.getElementById('viewZoom').addEventListener('click',function(){setMode('zoom');});
+  document.getElementById('nowBtn').addEventListener('click',function(){
+    var n=new Date();
+    dateInput.value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+    slider.value=n.getHours()*60+n.getMinutes();
+    render();
+  });
+  latIn.addEventListener('change',function(){setLocation(parseFloat(latIn.value),parseFloat(lonIn.value),'');});
+  lonIn.addEventListener('change',function(){setLocation(parseFloat(latIn.value),parseFloat(lonIn.value),'');});
+  document.getElementById('geoBtn').addEventListener('click',function(){
+    if(!navigator.geolocation){locMsg.textContent='geolocation not supported — type coordinates instead';return;}
+    locMsg.textContent='locating…';
+    navigator.geolocation.getCurrentPosition(
+      function(p){setLocation(p.coords.latitude,p.coords.longitude,'using your location');},
+      function(){locMsg.textContent='location blocked — type coordinates instead';},
+      {enableHighAccuracy:false,timeout:10000,maximumAge:600000});
+  });
+
+  // ---- share: copy a link that reproduces this exact view (no network involved) ----
+  var shareMsgEl=document.getElementById('shareMsg'), shareTimer=null;
+  function flashShare(s){
+    shareMsgEl.textContent=s;
+    if(shareTimer) clearTimeout(shareTimer);
+    shareTimer=setTimeout(function(){shareMsgEl.textContent='';},2600);
+  }
+  function copyText(s){
+    if(navigator.clipboard&&navigator.clipboard.writeText) return navigator.clipboard.writeText(s);
+    return new Promise(function(res,rej){
+      var ta=document.createElement('textarea');
+      ta.value=s; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      var ok=false;
+      try{ok=document.execCommand('copy');}catch(e){}
+      document.body.removeChild(ta);
+      if(ok)res(); else rej(new Error('copy failed'));
+    });
+  }
+  document.getElementById('shareBtn').addEventListener('click',function(){
+    var min=+slider.value;
+    var hh=String(Math.floor(min/60)).padStart(2,'0'), m2=String(min%60).padStart(2,'0');
+    var url=location.origin+location.pathname
+      +'?lat='+LAT.toFixed(2)+'&lon='+LON.toFixed(2)
+      +'&date='+dateInput.value+'&t='+hh+':'+m2;
+    copyText(url).then(function(){flashShare('link copied ✓');},
+                       function(){flashShare('copy blocked — link: '+url);});
+  });
+
+  // init: date = device today, time = 10 PM; all overridable via ?lat=&lon=&date=&t=
+  var d=new Date();
+  dateInput.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  var q=new URLSearchParams(location.search);
+  var qd=q.get('date');
+  if(qd&&/^\d{4}-\d{2}-\d{2}$/.test(qd)) dateInput.value=qd;
+  var qt=q.get('t');
+  if(qt&&/^\d{1,2}:\d{2}$/.test(qt)){
+    var tmin=(+qt.split(':')[0])*60+(+qt.split(':')[1]);
+    if(tmin>=0&&tmin<1440) slider.value=Math.round(tmin/10)*10;   // snap to the slider's 10-min step
+  }
+  setLocation(parseFloat(q.get('lat')), parseFloat(q.get('lon')), '');  // falls back to defaults if absent
+})();
+</script>
+</body>
+</html>

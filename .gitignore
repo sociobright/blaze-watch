@@ -1,0 +1,16 @@
+# monitor state / logs (Python version)
+monitor/python/tcrb_state.json
+*.log
+
+# local env / secrets — never commit these
+.env
+*.env
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# local dev tooling (preview server config)
+.claude/
