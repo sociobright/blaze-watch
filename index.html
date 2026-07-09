@@ -664,8 +664,10 @@
     if(!isFinite(lat)||!isFinite(lon)){placeEl.textContent='';return;}
     var seq=++geoSeq;
     placeEl.textContent='locating place…';
+    // Coordinates are rounded to 2 decimals (~1 km) before leaving the browser:
+    // that's plenty to resolve a place name, and avoids sending precise positions.
     var url='https://api.bigdatacloud.net/data/reverse-geocode-client?latitude='
-      +lat.toFixed(4)+'&longitude='+lon.toFixed(4)+'&localityLanguage=en';
+      +lat.toFixed(2)+'&longitude='+lon.toFixed(2)+'&localityLanguage=en';
     fetch(url).then(function(r){return r.ok?r.json():null;}).then(function(d){
       if(seq!==geoSeq) return;                 // a newer lookup superseded this one
       var name=placeLabel(d);
